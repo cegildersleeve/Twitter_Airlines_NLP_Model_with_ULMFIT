@@ -1,0 +1,812 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "name": "Untitled2.ipynb",
+      "version": "0.3.2",
+      "provenance": [],
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "accelerator": "GPU"
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/cegildersleeve/Twitter_Airlines_ULMFIT/blob/master/ULMFIT%20Sentiment%20Analysis%20with%20FastAI\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "jby8i9vGW-kB",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "pd.options.display.max_colwidth = 100\n",
+        "pd.options.display.max_rows = 1000\n",
+        "import matplotlib.pyplot as plt\n",
+        "import datetime as dt\n",
+        "from datetime import datetime\n",
+        "from sklearn.metrics import fbeta_score,  accuracy_score\n",
+        "from sklearn.model_selection import train_test_split\n"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "GFDpN-OgcMbe",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "import fastai\n",
+        "from fastai import *\n",
+        "from fastai.text import * \n",
+        "from functools import partial"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "j72Eyx_HXUR3",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "tweets = pd.read_csv(r'clean_Tweets.csv')"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "WPIe_cfLmqLv",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "tweets = tweets.loc[:,['text', 'airline_sentiment']]\n"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "zmW84VS5nGRt",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "tweets.columns = ['text','labels']"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "Bb8EYgZ2oi06",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "tweets = tweets[['labels','text']]"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "22X3pe1mX7qi",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "df_test = tweets.sample(frac=.2)"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "yL7L2UhAeQgd",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "df_train = tweets.drop(df_test.index)"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "3KOPFhz2Yb-G",
+        "colab_type": "code",
+        "outputId": "6d3f2f7d-f2f2-4ccd-ae00-3373a92fe91d",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 85
+        }
+      },
+      "source": [
+        "df_train.labels.value_counts()/df_train.labels.shape[0]"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "negative    0.607116\n",
+              "neutral     0.221982\n",
+              "positive    0.170902\n",
+              "Name: labels, dtype: float64"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 56
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "kaQT1LaHnnVR",
+        "colab_type": "code",
+        "outputId": "2b5de38a-4dba-4c84-f807-d9697fc55d44",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 85
+        }
+      },
+      "source": [
+        "df_test.labels.value_counts()/df_test.labels.shape[0]"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "negative    0.717045\n",
+              "neutral     0.164773\n",
+              "positive    0.118182\n",
+              "Name: labels, dtype: float64"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 57
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "jGyWRnFhr2rr",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "\n",
+        "#!wget -nH -r -np -P URL 'http://files.fast.ai/models/wt103/'\n"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "JHmO_T__stUj",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "#!wget -nH -r -np -P URL http://files.fast.ai/models/wt103_v1/lstm_wt103.pth\n"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "RP-qTWQEuDya",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "#!wget -nH -r -np -P URL http://files.fast.ai/models/wt103_v1/itos_wt103.pkl"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "0F3T8ivPnw5X",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "data_lm = TextLMDataBunch.from_df(train_df = df_train, valid_df = df_test, path = \"\")\n",
+        "\n",
+        "data_clas = TextClasDataBunch.from_df(path = \"\", train_df = df_train, valid_df = df_test, vocab=data_lm.train_ds.vocab, bs=32)\n",
+        "\n",
+        "data_lm.save('data_lm_export.pkl')\n",
+        "data_clas.save('data_clas_export.pkl')"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "gKNMnR5oyFKL",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        ""
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "p1xlxsolYUb1",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "\n",
+        "\n",
+        "\n",
+        "\n",
+        "learn = language_model_learner(data_lm, arch=AWD_LSTM, drop_mult=0.5)\n",
+        "\n",
+        "\n"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "AC9MilPtrmzB",
+        "colab_type": "code",
+        "outputId": "debddb75-321f-4e37-c80c-da87f8545ecb",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 80
+        }
+      },
+      "source": [
+        "learn.fit_one_cycle(1, 1e-2, moms=(0.8,0.7))"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/html": [
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: left;\">\n",
+              "      <th>epoch</th>\n",
+              "      <th>train_loss</th>\n",
+              "      <th>valid_loss</th>\n",
+              "      <th>accuracy</th>\n",
+              "      <th>time</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <td>0</td>\n",
+              "      <td>5.062095</td>\n",
+              "      <td>4.385197</td>\n",
+              "      <td>0.238238</td>\n",
+              "      <td>00:07</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>"
+            ],
+            "text/plain": [
+              "<IPython.core.display.HTML object>"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          }
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "jmPmEHJBzGWo",
+        "colab_type": "code",
+        "outputId": "4e3bc356-0c85-45ac-8395-e936464ce6ff",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 359
+        }
+      },
+      "source": [
+        "learn.unfreeze()\n",
+        "learn.fit_one_cycle(10, 1e-3, moms=(0.8,0.7))"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/html": [
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: left;\">\n",
+              "      <th>epoch</th>\n",
+              "      <th>train_loss</th>\n",
+              "      <th>valid_loss</th>\n",
+              "      <th>accuracy</th>\n",
+              "      <th>time</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <td>0</td>\n",
+              "      <td>5.888214</td>\n",
+              "      <td>5.179422</td>\n",
+              "      <td>0.168647</td>\n",
+              "      <td>00:10</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>1</td>\n",
+              "      <td>5.077826</td>\n",
+              "      <td>4.314746</td>\n",
+              "      <td>0.271858</td>\n",
+              "      <td>00:10</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>2</td>\n",
+              "      <td>4.586674</td>\n",
+              "      <td>4.138057</td>\n",
+              "      <td>0.282606</td>\n",
+              "      <td>00:10</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>3</td>\n",
+              "      <td>4.271943</td>\n",
+              "      <td>4.015959</td>\n",
+              "      <td>0.296377</td>\n",
+              "      <td>00:11</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>4</td>\n",
+              "      <td>4.126338</td>\n",
+              "      <td>4.012311</td>\n",
+              "      <td>0.293389</td>\n",
+              "      <td>00:11</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>5</td>\n",
+              "      <td>3.946239</td>\n",
+              "      <td>3.954118</td>\n",
+              "      <td>0.300292</td>\n",
+              "      <td>00:11</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>6</td>\n",
+              "      <td>3.753163</td>\n",
+              "      <td>3.933256</td>\n",
+              "      <td>0.303314</td>\n",
+              "      <td>00:11</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>7</td>\n",
+              "      <td>3.617316</td>\n",
+              "      <td>3.936793</td>\n",
+              "      <td>0.302970</td>\n",
+              "      <td>00:11</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>8</td>\n",
+              "      <td>3.520686</td>\n",
+              "      <td>3.944774</td>\n",
+              "      <td>0.302988</td>\n",
+              "      <td>00:11</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>9</td>\n",
+              "      <td>3.454970</td>\n",
+              "      <td>3.949562</td>\n",
+              "      <td>0.302198</td>\n",
+              "      <td>00:11</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>"
+            ],
+            "text/plain": [
+              "<IPython.core.display.HTML object>"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          }
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "_npcB1WndyWj",
+        "colab_type": "code",
+        "outputId": "10842396-683d-4ac7-d962-9b83eb07557b",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 54
+        }
+      },
+      "source": [
+        "learn.predict(\"American Airlines what a bad bad flight that was give me my\", n_words=10)\n"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "'American Airlines what a bad bad flight that was give me my soul over hour today xxbos i check in for a'"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 62
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "GTj7up1hn8S5",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "learn.save_encoder('ft_enc')\n"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "TUOxdrpeXhcA",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "learn = text_classifier_learner(data_clas, AWD_LSTM, drop_mult=0.3)\n",
+        "learn.load_encoder('ft_enc')"
+      ],
+      "execution_count": 0,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "s58gn-Ble8dk",
+        "colab_type": "code",
+        "outputId": "4fb67451-20ba-4fd0-df7d-5a5c3714d9b4",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 357
+        }
+      },
+      "source": [
+        "data_clas.show_batch()\n"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/html": [
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th>text</th>\n",
+              "      <th>target</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <td>xxbos i do not have a xxunk count i can not send xxup -pron- mail to xxup -pron- via dm xxup -pron- be not follow xxup -pron- i follow xxup -pron- now so xxup -pron- can xxunk xxup -pron- a dm</td>\n",
+              "      <td>neutral</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>xxbos i be on hold for over minute and be talk to one of xxup -pron- employee i ask xxup -pron- for name or xxup -pron- would and xxup -pron- hang up in xxup -pron- face</td>\n",
+              "      <td>negative</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>xxbos hi just get xxup -pron- tsa precheck amp put xxup -pron- in xxup -pron- acct but xxup -pron- be not on xxup -pron- boarding pass for a flight this pm can xxup -pron- be update</td>\n",
+              "      <td>negative</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>xxbos i d med xxup -pron- xxup -pron- aa amp phone s amp xxup -pron- can not have someone call xxup -pron- what be the point of xxup -pron- response xxup -pron- do not resolve anything</td>\n",
+              "      <td>negative</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>xxbos i do not like be lie to no bad weather in dc md va xxup -pron- have be stick in ca all day and should have be home by now xxup -pron- owe xxup -pron-</td>\n",
+              "      <td>negative</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>"
+            ],
+            "text/plain": [
+              "<IPython.core.display.HTML object>"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          }
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "_qvBwlIefABG",
+        "colab_type": "code",
+        "outputId": "742c408b-8fd5-49dc-c68b-f58bfb74c1c2",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 80
+        }
+      },
+      "source": [
+        "learn.fit_one_cycle(1, 1e-2, moms=(.08,.07))\n"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/html": [
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: left;\">\n",
+              "      <th>epoch</th>\n",
+              "      <th>train_loss</th>\n",
+              "      <th>valid_loss</th>\n",
+              "      <th>accuracy</th>\n",
+              "      <th>time</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <td>0</td>\n",
+              "      <td>0.666453</td>\n",
+              "      <td>0.578019</td>\n",
+              "      <td>0.774590</td>\n",
+              "      <td>00:07</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>"
+            ],
+            "text/plain": [
+              "<IPython.core.display.HTML object>"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          }
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "--5Nnc01fShr",
+        "colab_type": "code",
+        "outputId": "6cd0ee31-e9bf-40b0-f1c8-64408a95a333",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 80
+        }
+      },
+      "source": [
+        "learn.freeze_to(-2)\n",
+        "learn.fit_one_cycle(1, slice(5e-3/2., 5e-3), moms = (.08,.07))"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/html": [
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: left;\">\n",
+              "      <th>epoch</th>\n",
+              "      <th>train_loss</th>\n",
+              "      <th>valid_loss</th>\n",
+              "      <th>accuracy</th>\n",
+              "      <th>time</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <td>0</td>\n",
+              "      <td>0.623451</td>\n",
+              "      <td>0.551685</td>\n",
+              "      <td>0.789276</td>\n",
+              "      <td>00:08</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>"
+            ],
+            "text/plain": [
+              "<IPython.core.display.HTML object>"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          }
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "luKlQ560fYEV",
+        "colab_type": "code",
+        "outputId": "9c988c78-1eae-4846-956b-ae56de35b008",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 80
+        }
+      },
+      "source": [
+        "learn.unfreeze()\n",
+        "learn.freeze_to(-3)\n",
+        "learn.fit_one_cycle(1, slice(2e-3/100, 2e-3), moms = (.08,.07))"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/html": [
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: left;\">\n",
+              "      <th>epoch</th>\n",
+              "      <th>train_loss</th>\n",
+              "      <th>valid_loss</th>\n",
+              "      <th>accuracy</th>\n",
+              "      <th>time</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <td>0</td>\n",
+              "      <td>0.554232</td>\n",
+              "      <td>0.527004</td>\n",
+              "      <td>0.799180</td>\n",
+              "      <td>00:13</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>"
+            ],
+            "text/plain": [
+              "<IPython.core.display.HTML object>"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          }
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "tGlshXRdfeuG",
+        "colab_type": "code",
+        "outputId": "912bdf74-ebb2-48d4-bfa8-f017e6bb4323",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 111
+        }
+      },
+      "source": [
+        "learn.unfreeze()\n",
+        "learn.fit_one_cycle(2, slice(1e-3/(2.6**4),1e-3), moms=(0.8,0.7))"
+      ],
+      "execution_count": 0,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/html": [
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: left;\">\n",
+              "      <th>epoch</th>\n",
+              "      <th>train_loss</th>\n",
+              "      <th>valid_loss</th>\n",
+              "      <th>accuracy</th>\n",
+              "      <th>time</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <td>0</td>\n",
+              "      <td>0.477106</td>\n",
+              "      <td>0.523719</td>\n",
+              "      <td>0.804645</td>\n",
+              "      <td>00:16</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>1</td>\n",
+              "      <td>0.396970</td>\n",
+              "      <td>0.535657</td>\n",
+              "      <td>0.800205</td>\n",
+              "      <td>00:17</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>"
+            ],
+            "text/plain": [
+              "<IPython.core.display.HTML object>"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          }
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "KNjdYARm3pPh",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        ""
+      ],
+      "execution_count": 0,
+      "outputs": []
+    }
+  ]
+}
